@@ -1,4 +1,3 @@
-import { img } from "framer-motion/client";
 import dgs from "../assets/1.jpg";
 import modena from "../assets/2.jpg";
 import snap from "../assets/3.jpg";
