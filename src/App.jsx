@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "./App.css";
 import pic from "./assets/1758787523721.png";
@@ -8,17 +8,75 @@ import github from "./assets/vecteezy_a-black-github-icon-in-a-circle_65742280.p
 import { projects } from "./constant";
 import SkillsSection from "./components/SkillsSection/SkillsSection";
 import ContactSection from "./components/ContactSection/ContactSection ";
+
 const Portfolio = () => {
   const [activeSection, setActiveSection] = useState("home");
   const [isLoading, setIsLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // Ref برای منو
+  const menuRef = useRef(null);
+  const hamburgerRef = useRef(null);
+
+  // شبیه‌سازی لودینگ اولیه
   useEffect(() => {
-    // شبیه‌سازی لودینگ اولیه
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
+
+  // جلوگیری از اسکرول وقتی منو بازه
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "unset";
+      };
+    }
+  }, [isMenuOpen]);
+
+  // هندلر کلیک ناوبری
+  const handleNavClick = useCallback((section) => {
+    setActiveSection(section);
+    setIsMenuOpen(false);
+  }, []);
+
+  // هندلر کلیک خارج از منو
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // اگر منو باز نباشه، کاری نکن
+      if (!isMenuOpen) return;
+
+      // اگر کلیک روی همبرگر بود، کاری نکن (همبرگر خودش handle می‌کنه)
+      if (hamburgerRef.current && hamburgerRef.current.contains(event.target)) {
+        return;
+      }
+
+      // اگر کلیک روی منو بود، کاری نکن
+      if (menuRef.current && menuRef.current.contains(event.target)) {
+        return;
+      }
+
+      // اگر کلیک خارج از منو بود، منو رو ببند
+      setIsMenuOpen(false);
+    };
+
+    // اضافه کردن event listener
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside); // برای موبایل
+
+    // Cleanup
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  // هندلر کلیک همبرگر
+  const handleHamburgerClick = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
 
   if (isLoading) {
     return (
@@ -41,6 +99,20 @@ const Portfolio = () => {
 
   return (
     <div className="portfolio">
+      {isMenuOpen && (
+        <div
+          className="menu-overlay"
+          onClick={() => setIsMenuOpen(false)}
+          role="button"
+          tabIndex={0}
+          aria-label="بستن منو"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              setIsMenuOpen(false);
+            }
+          }}
+        />
+      )}
       {/* نوار ناوبری */}
       <nav className="navbar">
         <motion.div
@@ -49,14 +121,35 @@ const Portfolio = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <img src={pic} alt="" className="" height={"45px"} width={"45px"} />
+          <img src={pic} alt="Logo" height="45" width="45" />
         </motion.div>
-        <ul className="nav-links">
+
+        {/* منوی همبرگری برای موبایل */}
+        <button
+          ref={hamburgerRef}
+          className={`hamburger ${isMenuOpen ? "active" : ""}`}
+          onClick={handleHamburgerClick}
+          aria-label="منو"
+          type="button"
+          aria-expanded={isMenuOpen}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        {/* منوی اصلی */}
+        <ul
+          ref={menuRef}
+          className={`nav-links ${isMenuOpen ? "active" : ""}`}
+          aria-hidden={!isMenuOpen}
+        >
           {["contact", "skills", "projects", "home"].reverse().map((item) => (
             <li key={item}>
               <button
-                className={`${activeSection === item ? "active" : ""} `}
-                onClick={() => setActiveSection(item)}
+                className={activeSection === item ? "active" : ""}
+                onClick={() => handleNavClick(item)}
+                type="button"
               >
                 {item === "home" && "خانه"}
                 {item === "projects" && "پروژه‌ها"}
@@ -69,7 +162,7 @@ const Portfolio = () => {
       </nav>
 
       {/* بخش اصلی */}
-      <main className="main-content">
+      <main className={`main-content ${isMenuOpen ? "blurred" : ""}`}>
         <AnimatePresence mode="wait">
           {activeSection === "home" && (
             <motion.section
@@ -111,13 +204,15 @@ const Portfolio = () => {
                 >
                   <button
                     className="btn primary"
-                    onClick={() => setActiveSection("projects")}
+                    onClick={() => handleNavClick("projects")}
+                    type="button"
                   >
                     مشاهده پروژه‌ها
                   </button>
                   <button
                     className="btn secondary"
-                    onClick={() => setActiveSection("contact")}
+                    onClick={() => handleNavClick("contact")}
+                    type="button"
                   >
                     تماس با من
                   </button>
@@ -158,7 +253,8 @@ const Portfolio = () => {
                       <img
                         src={project.image}
                         alt={project.title}
-                        height={"auto"}
+                        height="auto"
+                        loading="lazy"
                       />
                     </div>
                     <div className="project-content">
@@ -209,83 +305,7 @@ const Portfolio = () => {
             </motion.section>
           )}
 
-          {activeSection === "contact" && (
-            // <motion.section
-            //   key="contact"
-            //   className="contact-section"
-            //   initial={{ opacity: 0, y: 20 }}
-            //   animate={{ opacity: 1, y: 0 }}
-            //   exit={{ opacity: 0, y: -20 }}
-            //   transition={{ duration: 0.5 }}
-            // >
-            //   <h2>تماس با من</h2>
-            //   <div className="contact-content">
-            //     <motion.div
-            //       className="contact-info"
-            //       initial={{ opacity: 0, x: -50 }}
-            //       animate={{ opacity: 1, x: 0 }}
-            //       transition={{ delay: 0.2 }}
-            //     >
-            //       <h3>بیایید با هم صحبت کنیم</h3>
-            //       <p>
-            //         اگر به همکاری علاقه‌مند هستید یا سوالی دارید، خوشحال می‌شوم
-            //         از شما بشنوم.
-            //       </p>
-            //       <div className="contact-details">
-            //         <div className="contact-item">
-            //           <span>ایمیل:</span>
-            //           <a href="mailto:hamidsmoaser@gmail.com">
-            //             hamidsmoaser@gmail.com
-            //           </a>
-            //         </div>
-            //         <div className="contact-item">
-            //           <span>گیت‌هاب:</span>
-            //           <a
-            //             href="https://github.com/HamidSamiee"
-            //             target="_blank"
-            //             rel="noopener noreferrer"
-            //           >
-            //             github.com/HamidSamiee
-            //           </a>
-            //         </div>
-            //         <div className="contact-item">
-            //           <span>لینکدین:</span>
-            //           <a
-            //             href="https://linkedin.com/in/hamidsamiee"
-            //             target="_blank"
-            //             rel="noopener noreferrer"
-            //           >
-            //             linkedin.com/in/hamidsamiee
-            //           </a>
-            //         </div>
-            //       </div>
-            //     </motion.div>
-            //     <motion.form
-            //       className="contact-form"
-            //       initial={{ opacity: 0, x: 50 }}
-            //       animate={{ opacity: 1, x: 0 }}
-            //       transition={{ delay: 0.4 }}
-            //     >
-            //       <div className="form-group">
-            //         <label htmlFor="name">نام</label>
-            //         <input type="text" id="name" required />
-            //       </div>
-            //       <div className="form-group">
-            //         <label htmlFor="email">ایمیل</label>
-            //         <input type="email" id="email" required />
-            //       </div>
-            //       <div className="form-group">
-            //         <label htmlFor="message">پیام</label>
-            //         <textarea id="message" rows="5" required></textarea>
-            //       </div>
-            //       <button type="submit" className="btn primary">
-            //         ارسال پیام
-            //       </button>
-            //     </motion.form>
-            //   </div>
-            // </motion.section>
-            <ContactSection />
-          )}
+          {activeSection === "contact" && <ContactSection />}
         </AnimatePresence>
       </main>
 
@@ -297,39 +317,42 @@ const Portfolio = () => {
             href="https://facebook.com/HamidSamiee"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="فیسبوک"
           >
             <img
               src={Ellipse}
-              alt=""
+              alt="Facebook"
               className="social_icons"
-              width={"24px"}
-              height={"24px"}
+              width="24"
+              height="24"
             />
           </a>
           <a
             href="https://github.com/HamidSamiee"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="گیت‌هاب"
           >
             <img
               src={github}
-              alt=""
+              alt="GitHub"
               className="social_icons"
-              width={"24px"}
-              height={"24px"}
+              width="24"
+              height="24"
             />
           </a>
           <a
             href="https://linkedin.com/in/hamidsamiee"
             target="_blank"
             rel="noopener noreferrer"
+            aria-label="لینکدین"
           >
             <img
               src={linkdin}
-              alt=""
+              alt="LinkedIn"
               className="social_icons"
-              width={"24px"}
-              height={"24px"}
+              width="24"
+              height="24"
             />
           </a>
         </div>
