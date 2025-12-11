@@ -83,6 +83,8 @@ export const skillsData = [
     skills: [
       { name: "Git", level: 89, color: "#F05032" },
       { name: "GitHub", level: 90, color: "#181717" },
+      { name: "Docker", level: 80, color: "#1D63ED" },
+      { name: "DockerHub", level: 80, color: "#1D63ED" },
       { name: "Vercel", level: 88, color: "#000000" },
       { name: "Netlify", level: 85, color: "#00C7B7" },
       { name: "Appwrite", level: 76, color: "#4285F4" },
